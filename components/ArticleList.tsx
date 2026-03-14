@@ -192,11 +192,11 @@ export default function ArticleList({ initialArticles }: ArticleListProps) {
                         </td>
                         <td className="py-4 px-6 align-top text-right whitespace-nowrap">
                           <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">
-                            {new Date(article.created_at).toLocaleDateString('en-US', {
+                            {mounted ? new Date(article.created_at).toLocaleDateString('en-US', {
                               month: 'short',
                               day: 'numeric',
                               year: 'numeric'
-                            })}
+                            }) : 'Loading...'}
                           </span>
                           <div className="mt-1 flex justify-end">
                             <svg className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-saffron-500 dark:group-hover:text-saffron-400 transform group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -241,11 +241,11 @@ export default function ArticleList({ initialArticles }: ArticleListProps) {
                   </div>
                   <div className="px-8 py-4 bg-gray-50/50 dark:bg-gray-800/50 border-t border-cream-100 dark:border-gray-800 mt-auto flex justify-between items-center transition-colors duration-300">
                     <span className="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase tracking-wider">
-                      {new Date(article.created_at).toLocaleDateString('en-US', {
+                      {mounted ? new Date(article.created_at).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric'
-                      })}
+                      }) : 'Loading...'}
                     </span>
                     <span className="text-saffron-600 dark:text-saffron-400 font-bold text-sm flex items-center group-hover:text-saffron-700 dark:group-hover:text-saffron-300 transition-colors">
                       Read More

@@ -19,12 +19,12 @@ async function getArticles(): Promise<Article[]> {
     const res = await fetch('https://api.askharekrishna.com/api/v1/chanting/articles/', {
       next: { revalidate: 3600 } // Cache for 1 hour
     });
-    
+
     if (!res.ok) {
       console.error('Failed to fetch articles');
       return [];
     }
-    
+
     return res.json();
   } catch (error) {
     console.error('Error fetching articles:', error);
@@ -47,7 +47,8 @@ export default async function ArticlesPage() {
             Explore profound writings and philosophical insights on the practice of mantra meditation and Krishna consciousness.
           </p>
         </div>
-        
+
+
         <ArticleList initialArticles={articles} />
       </main>
       <Footer />
