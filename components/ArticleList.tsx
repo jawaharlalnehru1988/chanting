@@ -28,6 +28,7 @@ const getExcerpt = (markdown: string) => {
 export default function ArticleList({ initialArticles }: ArticleListProps) {
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTopic, setSelectedTopic] = useState<'All' | string>('All');
   const [readArticles, setReadArticles] = useState<number[]>([]);
   const [mounted, setMounted] = useState(false);
 
@@ -43,18 +44,52 @@ export default function ArticleList({ initialArticles }: ArticleListProps) {
     }
   }, []);
 
+  const topics = useMemo(() => {
+    const uniqueTopics = Array.from(new Set(initialArticles.map(a => a.mainTopic)));
+    return ['All', ...uniqueTopics];
+  }, [initialArticles]);
+
   const filteredArticles = useMemo(() => {
-    if (!searchQuery.trim()) return initialArticles;
+    let filtered = initialArticles;
     
-    const query = searchQuery.toLowerCase();
-    return initialArticles.filter(article => 
-      article.mainTopic.toLowerCase().includes(query) || 
-      article.subTopic.toLowerCase().includes(query)
-    );
-  }, [initialArticles, searchQuery]);
+    // Filter by topic
+    if (selectedTopic !== 'All') {
+      filtered = filtered.filter(article => article.mainTopic === selectedTopic);
+    }
+    
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(article => 
+        article.mainTopic.toLowerCase().includes(query) || 
+        article.subTopic.toLowerCase().includes(query)
+      );
+    }
+    
+    return filtered;
+  }, [initialArticles, searchQuery, selectedTopic]);
 
   return (
     <div className="w-full relative z-20">
+      {/* Topic Filter Selection */}
+      <div className="mb-8 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex flex-nowrap gap-3 min-w-max">
+          {topics.map((topic) => (
+            <button
+              key={topic}
+              onClick={() => setSelectedTopic(topic)}
+              className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 border whitespace-nowrap ${
+                selectedTopic === topic
+                  ? 'bg-saffron-600 border-saffron-600 text-white shadow-md shadow-saffron-200 dark:shadow-none'
+                  : 'bg-white dark:bg-gray-900 border-cream-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-saffron-300 dark:hover:border-saffron-700 hover:text-saffron-600 dark:hover:text-saffron-400'
+              }`}
+            >
+              {topic}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Controls: Search and View Toggle */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-8 bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-cream-100 dark:border-gray-800 transition-colors duration-300">
         <div className="relative w-full md:w-96">
@@ -107,10 +142,13 @@ export default function ArticleList({ initialArticles }: ArticleListProps) {
             We couldn't find any articles matching "{searchQuery}". Try adjusting your search term.
           </p>
           <button 
-            onClick={() => setSearchQuery('')}
+            onClick={() => {
+              setSearchQuery('');
+              setSelectedTopic('All');
+            }}
             className="mt-4 text-saffron-600 dark:text-saffron-400 font-medium hover:text-saffron-700 dark:hover:text-saffron-300 transition-colors"
           >
-            Clear filter
+            Clear all filters
           </button>
         </div>
       ) : (
