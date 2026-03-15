@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import { useLanguage } from './LanguageContext';
 
 interface Article {
   id: number;
@@ -12,6 +13,7 @@ interface Article {
   order: number;
   created_at: string;
   updated_at: string;
+  language: string;
 }
 
 interface ArticleListProps {
@@ -26,11 +28,14 @@ const getExcerpt = (markdown: string) => {
 };
 
 export default function ArticleList({ initialArticles }: ArticleListProps) {
+  const { language, t } = useLanguage();
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTopic, setSelectedTopic] = useState<'All' | string>('All');
   const [readArticles, setReadArticles] = useState<number[]>([]);
   const [mounted, setMounted] = useState(false);
+  const [articles, setArticles] = useState<Article[]>(initialArticles);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -44,13 +49,37 @@ export default function ArticleList({ initialArticles }: ArticleListProps) {
     }
   }, []);
 
+  // Effect to re-fetch articles when language changes
+  useEffect(() => {
+    if (!mounted) return;
+
+    const fetchArticles = async () => {
+      setLoading(true);
+      try {
+        // Assuming API supports lang parameter
+        const res = await fetch(`https://api.askharekrishna.com/api/v1/chanting/articles/?lang=${language}`);
+        if (res.ok) {
+          const data = await res.json();
+          setArticles(data);
+          setSelectedTopic('All'); // Reset topic filter when language changes
+        }
+      } catch (error) {
+        console.error('Error fetching articles:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchArticles();
+  }, [language, mounted]);
+
   const topics = useMemo(() => {
-    const uniqueTopics = Array.from(new Set(initialArticles.map(a => a.mainTopic)));
+    const uniqueTopics = Array.from(new Set(articles.map(a => a.mainTopic)));
     return ['All', ...uniqueTopics];
-  }, [initialArticles]);
+  }, [articles]);
 
   const filteredArticles = useMemo(() => {
-    let filtered = initialArticles;
+    let filtered = articles;
     
     // Filter by topic
     if (selectedTopic !== 'All') {
@@ -67,10 +96,19 @@ export default function ArticleList({ initialArticles }: ArticleListProps) {
     }
     
     return filtered;
-  }, [initialArticles, searchQuery, selectedTopic]);
+  }, [articles, searchQuery, selectedTopic]);
 
   return (
     <div className="w-full relative z-20">
+      <div className="text-center mb-16">
+        <h1 className="font-display text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4 animate-fade-in transition-colors duration-300">
+          {t('spiritualArticles')}
+        </h1>
+        <p className="text-gray-600 dark:text-gray-300 text-lg max-w-2xl mx-auto transition-colors duration-300">
+          {t('exploreWritings')}
+        </p>
+      </div>
+
       {/* Topic Filter Selection */}
       <div className="mb-8 overflow-x-auto pb-2 scrollbar-hide">
         <div className="flex flex-nowrap gap-3 min-w-max">
@@ -84,7 +122,7 @@ export default function ArticleList({ initialArticles }: ArticleListProps) {
                   : 'bg-white dark:bg-gray-900 border-cream-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:border-saffron-300 dark:hover:border-saffron-700 hover:text-saffron-600 dark:hover:text-saffron-400'
               }`}
             >
-              {topic}
+              {topic === 'All' ? (language === 'ta' ? 'அனைத்தும்' : 'All') : topic}
             </button>
           ))}
         </div>
@@ -101,7 +139,7 @@ export default function ArticleList({ initialArticles }: ArticleListProps) {
           <input
             type="text"
             className="block w-full pl-10 pr-3 py-2 border border-cream-200 dark:border-gray-700 rounded-xl leading-5 bg-cream-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:bg-white dark:focus:bg-gray-900 focus:ring-2 focus:ring-saffron-500 focus:border-saffron-500 sm:text-sm transition-colors duration-300"
-            placeholder="Filter articles by topic or title..."
+            placeholder={t('filterPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
@@ -117,7 +155,7 @@ export default function ArticleList({ initialArticles }: ArticleListProps) {
             }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-            Table
+            {t('table')}
           </button>
           <button
             onClick={() => setViewMode('card')}
@@ -128,18 +166,22 @@ export default function ArticleList({ initialArticles }: ArticleListProps) {
             }`}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
-            Cards
+            {t('cards')}
           </button>
         </div>
       </div>
 
-      {/* Empty State */}
-      {filteredArticles.length === 0 ? (
+      {loading ? (
+        <div className="text-center py-20">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-saffron-500 border-t-transparent"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400 font-medium">{t('loading')}</p>
+        </div>
+      ) : filteredArticles.length === 0 ? (
         <div className="text-center bg-white dark:bg-gray-900 p-12 rounded-2xl shadow-sm border border-cream-100 dark:border-gray-800 transition-colors duration-300">
           <svg className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">No articles found</h3>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-1">{t('noArticlesFound')}</h3>
           <p className="text-gray-500 dark:text-gray-400">
-            We couldn't find any articles matching "{searchQuery}". Try adjusting your search term.
+            {language === 'ta' ? `"${searchQuery}" உடன் பொருந்தும் கட்டுரைகள் எதையும் எங்களால் கண்டுபிடிக்க முடியவில்லை. பிற சொற்களை முயற்சிக்கவும்.` : `We couldn't find any articles matching "${searchQuery}". Try adjusting your search term.`}
           </p>
           <button 
             onClick={() => {
@@ -148,22 +190,22 @@ export default function ArticleList({ initialArticles }: ArticleListProps) {
             }}
             className="mt-4 text-saffron-600 dark:text-saffron-400 font-medium hover:text-saffron-700 dark:hover:text-saffron-300 transition-colors"
           >
-            Clear all filters
+            {t('clearFilters')}
           </button>
         </div>
       ) : (
         <>
           {/* Table View */}
           {viewMode === 'table' && (
-            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-cream-100 dark:border-gray-800 overflow-hidden transition-colors duration-300">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-cream-100 dark:border-gray-800 overflow-hidden transition-colors duration-300 animate-fade-in">
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-cream-50 dark:bg-gray-800/50 border-b border-cream-100 dark:border-gray-800 transition-colors duration-300">
-                      <th className="py-4 px-6 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Topic</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Title</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">Excerpt</th>
-                      <th className="py-4 px-6 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">Date</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('topic')}</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('title')}</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">{t('excerpt')}</th>
+                      <th className="py-4 px-6 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider text-right">{t('date')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-cream-100 dark:divide-gray-800">
@@ -177,7 +219,7 @@ export default function ArticleList({ initialArticles }: ArticleListProps) {
                           <span className="font-display font-bold text-gray-900 dark:text-gray-100 group-hover:text-saffron-600 dark:group-hover:text-saffron-400 transition-colors block">
                             {article.subTopic}
                             {mounted && readArticles.includes(article.id) && (
-                              <span title="Marked as Read">
+                              <span title={t('markedAsRead')}>
                                 <svg className="inline-block w-4 h-4 ml-2 text-green-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                 </svg>
@@ -192,11 +234,11 @@ export default function ArticleList({ initialArticles }: ArticleListProps) {
                         </td>
                         <td className="py-4 px-6 align-top text-right whitespace-nowrap">
                           <span className="text-xs text-gray-400 dark:text-gray-500 font-medium">
-                            {mounted ? new Date(article.created_at).toLocaleDateString('en-US', {
+                            {mounted ? new Date(article.created_at).toLocaleDateString(language === 'ta' ? 'ta-IN' : 'en-US', {
                               month: 'short',
                               day: 'numeric',
                               year: 'numeric'
-                            }) : 'Loading...'}
+                            }) : t('loading')}
                           </span>
                           <div className="mt-1 flex justify-end">
                             <svg className="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-saffron-500 dark:group-hover:text-saffron-400 transform group-hover:translate-x-1 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -214,7 +256,7 @@ export default function ArticleList({ initialArticles }: ArticleListProps) {
 
           {/* Card View */}
           {viewMode === 'card' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-fade-in">
               {filteredArticles.map((article) => (
                 <Link
                   key={article.id}
@@ -228,7 +270,7 @@ export default function ArticleList({ initialArticles }: ArticleListProps) {
                     <h2 className="font-display text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4 group-hover:text-saffron-600 dark:group-hover:text-saffron-400 transition-colors flex items-start justify-between">
                       <span className="pr-2">{article.subTopic}</span>
                       {mounted && readArticles.includes(article.id) && (
-                        <span title="Marked as Read" className="flex-shrink-0 mt-1">
+                        <span title={t('markedAsRead')} className="flex-shrink-0 mt-1">
                           <svg className="w-6 h-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                           </svg>
@@ -241,14 +283,14 @@ export default function ArticleList({ initialArticles }: ArticleListProps) {
                   </div>
                   <div className="px-8 py-4 bg-gray-50/50 dark:bg-gray-800/50 border-t border-cream-100 dark:border-gray-800 mt-auto flex justify-between items-center transition-colors duration-300">
                     <span className="text-xs text-gray-400 dark:text-gray-500 font-semibold uppercase tracking-wider">
-                      {mounted ? new Date(article.created_at).toLocaleDateString('en-US', {
+                      {mounted ? new Date(article.created_at).toLocaleDateString(language === 'ta' ? 'ta-IN' : 'en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric'
-                      }) : 'Loading...'}
+                      }) : t('loading')}
                     </span>
                     <span className="text-saffron-600 dark:text-saffron-400 font-bold text-sm flex items-center group-hover:text-saffron-700 dark:group-hover:text-saffron-300 transition-colors">
-                      Read More
+                      {t('readMore')}
                       <svg className="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
                       </svg>

@@ -19,13 +19,13 @@ interface Article {
 import ArticleActions from "@/components/ArticleActions";
 
 // Ensure dynamic rendering works or fetch at build time
-async function getArticleData(slug: string): Promise<{
+async function getArticleData(slug: string, lang: string = 'en'): Promise<{
   current: Article | null;
   prev: Article | null;
   next: Article | null;
 }> {
   try {
-    const res = await fetch('https://api.askharekrishna.com/api/v1/chanting/articles/', {
+    const res = await fetch(`https://api.askharekrishna.com/api/v1/chanting/articles/?lang=${lang}`, {
       next: { revalidate: 3600 }
     });
     
@@ -51,9 +51,35 @@ async function getArticleData(slug: string): Promise<{
   }
 }
 
-export default async function ArticleDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+// Simple translation helper for server components
+const getTranslation = (lang: string) => {
+  const translations: any = {
+    en: {
+      backToArticles: "Back to Articles",
+      previousArticle: "Previous Article",
+      nextArticle: "Next Article",
+    },
+    ta: {
+      backToArticles: "கட்டுரைகளுக்குத் திரும்பு",
+      previousArticle: "முந்தைய கட்டுரை",
+      nextArticle: "அடுத்த கட்டுரை",
+    }
+  };
+  return translations[lang] || translations.en;
+};
+
+export default async function ArticleDetailPage({ 
+  params, 
+  searchParams 
+}: { 
+  params: Promise<{ slug: string }>,
+  searchParams: Promise<{ lang?: string }>
+}) {
   const resolvedParams = await params;
-  const { current: article, prev, next } = await getArticleData(resolvedParams.slug);
+  const resolvedSearchParams = await searchParams;
+  const lang = resolvedSearchParams.lang || 'en';
+  const { current: article, prev, next } = await getArticleData(resolvedParams.slug, lang);
+  const t = getTranslation(lang);
 
   if (!article) {
     notFound();
@@ -72,7 +98,7 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
             <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
             </svg>
-            Back to Articles
+            {t.backToArticles}
           </Link>
           <div className="mb-4">
             <span className="px-4 py-1.5 bg-white/20 dark:bg-black/30 backdrop-blur-sm text-white rounded-full text-xs font-bold uppercase tracking-widest shadow-sm">
@@ -83,7 +109,7 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
             {article.subTopic}
           </h1>
           <p className="text-saffron-50 dark:text-gray-300 font-medium tracking-wide">
-            {new Date(article.created_at).toLocaleDateString('en-US', {
+            {new Date(article.created_at).toLocaleDateString(lang === 'ta' ? 'ta-IN' : 'en-US', {
               year: 'numeric',
               month: 'long',
               day: 'numeric'
@@ -121,12 +147,12 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
           <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
             {prev ? (
               <Link 
-                href={`/articles/${prev.slug}`}
+                href={`/articles/${prev.slug}?lang=${lang}`}
                 className="group flex flex-col p-6 bg-white dark:bg-gray-900 rounded-2xl border border-cream-200 dark:border-gray-800 shadow-sm hover:shadow-md dark:hover:shadow-gray-900/50 hover:border-saffron-300 dark:hover:border-saffron-700 transition-all duration-300"
               >
                 <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm font-medium mb-2 group-hover:text-saffron-600 dark:group-hover:text-saffron-400 transition-colors">
                   <svg className="w-4 h-4 mr-2 transform group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                  Previous Article
+                  {t.previousArticle}
                 </div>
                 <h3 className="font-display font-bold text-lg text-gray-900 dark:text-gray-100 group-hover:text-saffron-700 dark:group-hover:text-saffron-300 line-clamp-2 transition-colors">
                   {prev.subTopic}
@@ -136,11 +162,11 @@ export default async function ArticleDetailPage({ params }: { params: Promise<{ 
 
             {next && (
               <Link 
-                href={`/articles/${next.slug}`}
+                href={`/articles/${next.slug}?lang=${lang}`}
                 className="group flex flex-col p-6 bg-white dark:bg-gray-900 rounded-2xl border border-cream-200 dark:border-gray-800 shadow-sm hover:shadow-md dark:hover:shadow-gray-900/50 hover:border-saffron-300 dark:hover:border-saffron-700 transition-all duration-300 text-right md:col-start-2"
               >
                 <div className="flex items-center justify-end text-gray-500 dark:text-gray-400 text-sm font-medium mb-2 group-hover:text-saffron-600 dark:group-hover:text-saffron-400 transition-colors">
-                  Next Article
+                  {t.nextArticle}
                   <svg className="w-4 h-4 ml-2 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
                 </div>
                 <h3 className="font-display font-bold text-lg text-gray-900 dark:text-gray-100 group-hover:text-saffron-700 dark:group-hover:text-saffron-300 line-clamp-2 transition-colors">

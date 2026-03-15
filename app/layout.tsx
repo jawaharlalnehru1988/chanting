@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cinzel, Lora } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { LanguageProvider } from "@/components/LanguageContext";
 
 const cinzel = Cinzel({
   variable: "--font-display",
@@ -30,7 +31,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${cinzel.variable} ${lora.variable} antialiased bg-cream-50 dark:bg-gray-950 transition-colors duration-300`}>
         <ThemeProvider>
-          {children}
+          <LanguageProvider>
+            {children}
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>
